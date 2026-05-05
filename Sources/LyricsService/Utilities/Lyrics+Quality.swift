@@ -10,6 +10,9 @@ private let noTitleFactor = 0.8
 private let noDurationFactor = 0.8
 private let minimalDurationQuality = 0.5
 private let qualityMixBound = 1.05
+private let fallbackOvershootGrace: TimeInterval = 5
+private let fallbackDurationTolerance: TimeInterval = 30
+private let fallbackDurationScale: TimeInterval = 150
 
 extension Lyrics {
     public var quality: Double {
@@ -73,15 +76,33 @@ extension Lyrics {
     }
 
     private var durationQuality: Double {
-        guard let duration = length,
-              let searchDuration = metadata.request?.duration else {
+        guard let searchDuration = metadata.request?.duration else {
             return noDurationFactor
         }
-        let dt = abs(searchDuration - duration)
-        guard dt < 10 else {
+        if let duration = length {
+            let dt = abs(searchDuration - duration)
+            guard dt < 10 else {
+                return minimalDurationQuality
+            }
+            return 1 - pow(dt / 10, 2) * (1 - minimalDurationQuality)
+        }
+        // Fallback: use the last line's timestamp. Real lyrics naturally end
+        // before song duration (outros, partial transcriptions), so penalize
+        // asymmetrically — overshoot is a strong wrong-song signal, undershoot
+        // up to `fallbackDurationTolerance` is normal.
+        guard let lastLineEnd = lines.last?.position else {
+            return noDurationFactor
+        }
+        let signed = lastLineEnd - searchDuration
+        if signed > fallbackOvershootGrace {
             return minimalDurationQuality
         }
-        return 1 - pow(dt / 10, 2) * (1 - minimalDurationQuality)
+        let gap = max(0, -signed)
+        if gap <= fallbackDurationTolerance {
+            return 1
+        }
+        let extra = min(gap - fallbackDurationTolerance, fallbackDurationScale)
+        return 1 - pow(extra / fallbackDurationScale, 2) * (1 - noDurationFactor)
     }
 }
 
