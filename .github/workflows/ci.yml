@@ -31,17 +31,6 @@ jobs:
             -scheme LyricsKit \
             -destination "platform=iOS Simulator,name=iPhone 12" | xcpretty
 
-  linux:
-    runs-on: ubuntu-latest
-    container:
-      image: swift:latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Swift Version
-        run: swift --version
-      - name: Build and Test
-        run: swift test --enable-test-discovery
-
   combine:
     runs-on: macOS-latest
     env:
