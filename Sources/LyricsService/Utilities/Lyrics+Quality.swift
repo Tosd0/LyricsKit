@@ -16,7 +16,7 @@ extension Lyrics {
         if let quality = metadata.quality {
             return quality
         }
-        var quality = 1 - pow((qualityMixBound - artistQuality) * (qualityMixBound - titleQuality) * (qualityMixBound - durationQuality), 0.3333)
+        var quality = 1 - cbrt((qualityMixBound - artistQuality) * (qualityMixBound - titleQuality) * (qualityMixBound - durationQuality))
         if metadata.hasTranslation {
             quality += translationBonus
         }
